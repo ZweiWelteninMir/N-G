@@ -3,360 +3,790 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>N/G - Mein Workspace</title>
+    <title>N/G - Ultimate Workspace</title>
     <style>
+        :root {
+            --bg-main: #0d0e12;
+            --bg-sidebar: #13151a;
+            --bg-card: #1c1f26;
+            --border-color: #1f232d;
+            --text-main: #e3e6ed;
+            --text-muted: #a0a6b3;
+            --accent-blue: #2eaadc;
+            --accent-purple: #a155e6;
+            --accent-green: #22c55e;
+            --accent-red: #ef4444;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #0d0e12;
-            color: #e3e6ed;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-            box-sizing: border-box;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0; padding: 0;
+            display: flex; height: 100vh;
+            overflow: hidden; box-sizing: border-box;
+            position: relative;
+        }
+
+        /* --- SPOTLIGHT ONBOARDING SYSTEM --- */
+        .onboarding-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 99999; pointer-events: none;
+            box-shadow: 0 0 0 9999vw rgba(5, 6, 8, 0.85);
+            transition: all 0.25s ease;
+            border-radius: 4px;
+        }
+
+        .onboarding-box {
+            position: fixed; z-index: 100000;
+            background-color: var(--bg-sidebar);
+            border: 1px solid var(--accent-blue);
+            border-radius: 12px; padding: 20px;
+            width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            display: none; flex-direction: column; gap: 12px;
+            pointer-events: auto;
+            transition: top 0.3s ease, left 0.3s ease;
+        }
+
+        .onboarding-box h2 { font-size: 16px; margin: 0; color: #fff; display: flex; align-items: center; gap: 8px; }
+        .onboarding-box p { font-size: 13px; margin: 0; color: var(--text-muted); line-height: 1.4; }
+
+        .welcome-initial-card {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background-color: var(--bg-sidebar); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 30px; width: 400px; z-index: 100001;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 20px;
+        }
+
+        .welcome-initial-card h2 { margin: 0; font-size: 20px; }
+        .welcome-initial-card p { margin: 0; font-size: 14px; color: var(--text-muted); line-height: 1.4; }
+
+        .skip-tour-btn {
+            position: absolute; top: 15px; right: 15px; background: none; border: none;
+            color: var(--text-muted); cursor: pointer; font-size: 12px;
+        }
+        .skip-tour-btn:hover { color: #fff; }
+
+        /* --- Z-INDEX BOOSTER FÜR SPOTLIGHT --- */
+        .spotlight-active {
+            position: relative;
+            z-index: 100000 !important;
+            background-color: var(--bg-sidebar) !important;
+            box-shadow: 0 0 15px rgba(46, 170, 220, 0.4) !important;
+            pointer-events: none !important;
         }
 
         /* --- SEITENLEISTE --- */
         .sidebar {
-            width: 240px;
-            background-color: #13151a;
-            border-right: 1px solid #1f232d;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
+            width: 260px; background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color); padding: 24px;
+            display: flex; flex-direction: column; gap: 25px; justify-content: space-between;
         }
 
-        .logo-area {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            color: #ffffff;
-        }
-        .logo-area span { color: #2eaadc; }
+        .sidebar-top { display: flex; flex-direction: column; gap: 25px; overflow-y: auto; }
+        .logo-area { font-size: 24px; font-weight: 700; letter-spacing: 1px; color: #ffffff; }
+        .logo-area span { color: var(--accent-blue); }
 
         .sidebar-section h3 {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #525966;
-            margin: 0 0 12px 0;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+            color: #525966; margin: 0 0 12px 0;
+            display: flex; justify-content: space-between; align-items: center;
         }
 
-        .sidebar-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
+        .add-workspace-btn { background: none; border: none; color: var(--accent-blue); cursor: pointer; font-size: 14px; padding: 0; }
+        .sidebar-menu { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+        
         .menu-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            border-radius: 6px;
-            color: #a0a6b3;
-            font-size: 14px;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 12px; border-radius: 8px; color: var(--text-muted);
+            font-size: 14px; cursor: pointer; transition: all 0.2s ease;
         }
+        .menu-item:hover { background-color: #171921; color: #ffffff; }
+        .menu-item.active { background-color: var(--bg-card); color: #ffffff; border-left: 3px solid var(--accent-blue); }
+        .delete-ws-btn { background: none; border: none; color: #525966; cursor: pointer; font-size: 12px; display: none; }
+        .menu-item:hover .delete-ws-btn { display: block; }
+        .delete-ws-btn:hover { color: var(--accent-red); }
 
-        .menu-item.active {
-            background-color: #1c1f26;
-            color: #ffffff;
+        .sidebar-footer { border-top: 1px solid var(--border-color); padding-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .util-btn {
+            background-color: #1c1f26; border: 1px solid #242936; color: var(--text-main);
+            padding: 10px; border-radius: 8px; cursor: pointer; font-size: 13px;
+            display: flex; align-items: center; gap: 10px; font-weight: 500; transition: background 0.2s;
         }
+        .util-btn:hover { background-color: #242936; }
 
         /* --- HAUPTBEREICH --- */
-        .main-content {
-            flex: 1;
-            padding: 40px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; display: flex; flex-direction: column; gap: 30px; }
+        .header-bar h1 { margin: 0; font-size: 28px; font-weight: 700; }
 
-        .header-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* --- INPUT BEREICH --- */
+        /* --- STYLED INPUT BEREICH --- */
         .input-wrapper {
-            background: linear-gradient(135deg, rgba(46, 170, 220, 0.1), rgba(161, 85, 230, 0.1));
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 14px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, rgba(46, 170, 220, 0.04), rgba(161, 85, 230, 0.04));
+            border: 1px solid var(--border-color); border-radius: 16px; padding: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; gap: 14px;
+            max-width: 800px;
         }
 
-        .input-row { display: flex; gap: 12px; }
+        .input-row { display: flex; gap: 12px; align-items: center; }
 
-        input[type="text"] {
-            flex: 1;
-            padding: 14px 18px;
-            border: 1px solid #1f232d;
+        input[type="text"], input[type="password"], select {
+            background-color: var(--bg-sidebar);
+            border: 1px solid #2c313d;
             border-radius: 8px;
-            background-color: #13151a;
-            color: #ffffff;
-            font-size: 15px;
+            color: var(--text-main);
+            padding: 10px 14px;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+            height: 40px;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        input:focus { outline: none; border-color: #2eaadc; }
+
+        input[type="text"]:focus, input[type="password"]:focus, select:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(46, 170, 220, 0.15);
+        }
+
+        #taskInput { flex: 1; }
 
         select {
-            padding: 14px;
-            border: 1px solid #1f232d;
-            border-radius: 8px;
-            background-color: #13151a;
-            color: #ffffff;
-            font-size: 15px;
             cursor: pointer;
+            padding-right: 30px;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'><path stroke='%23a0a6b3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1l4 4 4-4'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
         }
 
-        button.primary-btn {
-            padding: 14px 24px;
-            background: linear-gradient(135deg, #2eaadc, #a155e6);
-            color: white;
-            font-size: 15px;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
+        .tag-setup-row {
+            display: flex; gap: 12px; align-items: center; background-color: rgba(0,0,0,0.15);
+            padding: 10px 14px; border-radius: 8px; border: 1px dashed var(--border-color);
         }
+
+        .color-picker-wrapper {
+            position: relative;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid #2c313d;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        input[type="color"] {
+            position: absolute; top: -5px; left: -5px;
+            width: 40px; height: 40px;
+            border: none; background: none; cursor: pointer;
+            padding: 0; margin: 0;
+        }
+
+        .primary-btn {
+            height: 40px; padding: 0 20px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white; font-size: 14px; border: none; border-radius: 8px;
+            font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .primary-btn:hover { opacity: 0.9; }
 
         /* --- KANBAN BOARD LAYOUT --- */
-        .board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-        }
-
+        .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
         .column {
-            background-color: #13151a;
-            border: 1px solid #1f232d;
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 400px;
-            display: flex;
-            flex-direction: column;
+            background-color: var(--bg-sidebar); border: 1px solid var(--border-color);
+            border-radius: 14px; padding: 20px; min-height: 450px;
+            display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        .column-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #1f232d;
-        }
-
-        .column-header h2 { font-size: 14px; margin: 0; color: #ffffff; text-transform: uppercase; }
-        .counter { background-color: #1f232d; color: #a0a6b3; padding: 2px 8px; border-radius: 20px; font-size: 11px; }
+        .column-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); }
+        .column-header h2 { font-size: 13px; margin: 0; color: #ffffff; text-transform: uppercase; letter-spacing: 0.5px; }
+        .counter { background-color: var(--border-color); color: var(--text-muted); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
         .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
 
         /* --- KARTEN DESIGN --- */
         .task-card {
-            background-color: #1c1f26;
-            border: 1px solid #242936;
-            border-radius: 10px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+            background-color: var(--bg-card); border: 1px solid #242936; border-radius: 12px;
+            padding: 16px; display: flex; flex-direction: column; gap: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s;
         }
 
-        #todo-list .task-card { border-left: 3px solid #2eaadc; }
-        #progress-list .task-card { border-left: 3px solid #a155e6; }
-        #done-list .task-card { border-left: 3px solid #22c55e; }
+        #todo-list .task-card { border-left: 4px solid var(--accent-blue); }
+        #progress-list .task-card { border-left: 4px solid var(--accent-purple); }
+        #done-list .task-card { border-left: 4px solid var(--accent-green); }
 
-        .task-text { font-size: 15px; color: #e3e6ed; word-break: break-word; }
-        .tag { display: inline-block; align-self: flex-start; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
-        .tag.wichtig { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
-        .tag.notiz { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-        .tag.goodnotes { background-color: rgba(168, 85, 247, 0.15); color: #a855f7; }
+        .task-text { font-size: 15px; color: var(--text-main); word-break: break-word; line-height: 1.4; }
+        .dynamic-tag { display: inline-block; align-self: flex-start; padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #fff; }
         
-        .task-footer { display: flex; justify-content: space-between; align-items: center; }
-        .task-actions { display: flex; gap: 6px; }
+        .task-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+        .task-actions { display: flex; gap: 6px; width: 100%; justify-content: flex-end; }
 
-        .action-btn { background-color: #13151a; border: none; color: #a0a6b3; padding: 6px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+        .action-btn { background-color: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; height: 32px;}
         .action-btn:hover { background-color: #242936; color: #ffffff; }
-        .action-btn.delete { color: #ef4444; }
+        .action-btn.delete { color: var(--accent-red); border-color: rgba(239, 68, 68, 0.1); }
         .action-btn.delete:hover { background-color: rgba(239, 68, 68, 0.15); }
+        .action-btn.archive { color: var(--accent-green); }
 
-        .status-bar { margin-top: auto; font-size: 12px; color: #525966; display: flex; justify-content: space-between; border-top: 1px solid #1f232d; padding-top: 15px; }
+        /* --- MODALS --- */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: rgba(13, 14, 18, 0.85); z-index: 9999;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-sidebar); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 24px; width: 100%; max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 16px;
+        }
+
+        .modal-content h2 { font-size: 20px; margin: 0; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+        
+        .archive-list { max-height: 300px; overflow-y: auto; list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+        .archive-item { background-color: var(--bg-card); padding: 12px; border-radius: 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+
+        .status-bar { margin-top: auto; font-size: 12px; color: #525966; display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="logo-area">N<span>/</span>G</div>
-        <div class="sidebar-section">
-            <h3>Übersicht</h3>
-            <ul class="sidebar-menu">
-                <li class="menu-item active">💻 Workspace</li>
-            </ul>
+    <div class="onboarding-overlay" id="spotlightOverlay"></div>
+    
+    <div class="welcome-initial-card" id="initialWelcomeCard">
+        <button class="skip-tour-btn" onclick="abortTour()">Überspringen ✕</button>
+        <h2>Willkommen im Workspace</h2>
+        <p>Deine Daten lagern komplett auf deinem Rechner. Wie möchtest du starten?</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 5px;">
+            <button class="primary-btn" onclick="startSpotlightTour()">Neu hier? Funktionen zeigen ✨</button>
+            <button class="util-btn" style="justify-content: center; padding: 12px;" onclick="abortTour(); openBackupModal('import');">🔒 Vorhandenes Backup laden</button>
+        </div>
+    </div>
+
+    <div class="onboarding-box" id="tourBox">
+        <h2 id="tourTitle">Schritt</h2>
+        <p id="tourText">Erklärung</p>
+        <div style="display: flex; justify-content: flex-end; margin-top: 5px;">
+            <button class="primary-btn" id="tourNextBtn" style="padding: 6px 14px; font-size: 12px; height:32px;">Weiter</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="backupModal">
+        <div class="modal-content">
+            <h2 id="backupModalTitle">🔒 Master-Backup</h2>
+            <p id="backupModalDesc" style="font-size: 13px; color: var(--text-muted); margin: 0;">Gib ein Passwort ein, um deine Boards verschlüsselt zu sichern.</p>
+            <input type="password" id="cryptoPassword" placeholder="Passwort vergeben...">
+            <input type="file" id="importFile" style="display: none;" onchange="processImport(this)">
+            <div class="modal-actions">
+                <button class="action-btn" onclick="closeModal('backupModal')">Abbrechen</button>
+                <button class="primary-btn" id="cryptoSubmitBtn" style="padding: 10px 20px; font-size: 14px;">Ausführen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="archiveModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2>📦 Globales Archiv (<span id="archive-count-title">0</span>)</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0;">Verwahrte Einträge des aktuellen Boards.</p>
+            <ul id="archive-list-container" class="archive-list"></ul>
+            <div class="modal-actions">
+                <button class="primary-btn" style="padding: 10px 20px; font-size: 14px;" onclick="closeModal('archiveModal')">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar" id="step_sidebar">
+        <div class="sidebar-top">
+            <div class="logo-area">N<span>/</span>G</div>
+            <div class="sidebar-section">
+                <h3>Workspaces <button class="add-workspace-btn" onclick="addNewWorkspace()">+ Neu</button></h3>
+                <ul class="sidebar-menu" id="workspace-menu-list"></ul>
+            </div>
+        </div>
+
+        <div class="sidebar-footer" id="step_backup_zone">
+            <button class="util-btn" onclick="openArchive()"><b style="font-size:15px;">📦</b> Archiv öffnen</button>
+            <button class="util-btn" onclick="openBackupModal('export')"><b style="font-size:15px;">🔒</b> Backup erstellen</button>
+            <button class="util-btn" onclick="openBackupModal('import')"><b style="font-size:15px;">🔓</b> Backup einspielen</button>
         </div>
     </div>
 
     <div class="main-content">
-        
         <div class="header-bar">
-            <h1>Mein Workspace</h1>
+            <h1 id="current-workspace-title">Mein Workspace</h1>
         </div>
         
-        <div class="input-wrapper">
+        <div class="input-wrapper" id="step_input_zone">
             <div class="input-row">
                 <input type="text" id="taskInput" placeholder="Neue Aufgabe, Notiz oder Link hinzufügen..." autocomplete="off">
-                <select id="tagSelect">
-                    <option value="notiz">🔵 Notiz</option>
-                    <option value="wichtig">🔴 Wichtig</option>
-                    <option value="goodnotes">🟣 GoodNotes</option>
-                </select>
+                <select id="tagSelect"></select>
                 <button id="addBtn" class="primary-btn">+ Hinzufügen</button>
+            </div>
+            <div class="tag-setup-row">
+                <span style="font-size: 13px; color: var(--text-muted);">🏷️ Tags erstellen:</span>
+                <input type="text" id="newTagName" placeholder="Tag Name..." style="max-width: 150px;">
+                <div class="color-picker-wrapper" id="colorWrapper" style="background-color: #2eaadc;">
+                    <input type="color" id="newTagColor" value="#2eaadc" oninput="document.getElementById('colorWrapper').style.backgroundColor = this.value">
+                </div>
+                <button class="action-btn" onclick="createNewCustomTag()" style="height: 40px; padding: 0 15px;">Erstellen</button>
             </div>
         </div>
 
-        <div class="board">
+        <div class="board" id="step_kanban_board">
             <div class="column">
-                <div class="column-header">
-                    <h2>Zu tun</h2>
-                    <span id="todo-count" class="counter">0</span>
-                </div>
+                <div class="column-header"><h2>Zu tun</h2><span id="todo-count" class="counter">0</span></div>
                 <ul id="todo-list" class="task-list"></ul>
             </div>
-
             <div class="column">
-                <div class="column-header">
-                    <h2>In Arbeit</h2>
-                    <span id="progress-count" class="counter">0</span>
-                </div>
+                <div class="column-header"><h2>In Arbeit</h2><span id="progress-count" class="counter">0</span></div>
                 <ul id="progress-list" class="task-list"></ul>
             </div>
-
             <div class="column">
-                <div class="column-header">
-                    <h2>Erledigt</h2>
-                    <span id="done-count" class="counter">0</span>
-                </div>
+                <div class="column-header"><h2>Erledigt</h2><span id="done-count" class="counter">0</span></div>
                 <ul id="done-list" class="task-list"></ul>
             </div>
         </div>
 
         <div class="status-bar">
             <span>Hosted via GitHub Pages</span>
-            <span>🔒 Daten lokal und sicher im Browser gespeichert</span>
+            <span id="crypto-status-indicator">🔒 Lokale Daten-Engine aktiv</span>
         </div>
     </div>
 
     <script>
-        // Lädt die Daten beim Starten aus dem LocalStorage
-        let tasks = JSON.parse(localStorage.getItem('workspace_tasks_v7')) || [];
+        // --- DATA STATE MANIFEST ---
+        let state = {
+            onboardingDone: JSON.parse(localStorage.getItem('ng_onboarding_done')) || false,
+            workspaces: JSON.parse(localStorage.getItem('ng_workspaces_manifest')) || ["Standard"],
+            activeWorkspace: localStorage.getItem('ng_active_workspace') || "Standard",
+            tags: JSON.parse(localStorage.getItem('ng_custom_tags')) || [
+                { name: "notiz", color: "#3b82f6" },
+                { name: "wichtig", color: "#ef4444" }
+            ]
+        };
 
+        let tasks = JSON.parse(localStorage.getItem(`ng_tasks_${state.activeWorkspace}`)) || [];
+        let archive = JSON.parse(localStorage.getItem(`ng_archive_${state.activeWorkspace}`)) || [];
+
+        let currentTourStep = 0;
+        const tourSteps = [
+            { id: "step_sidebar", title: "📁 Seitenleiste", text: "Hier verwaltest du deine Workspaces. Du kannst getrennte Bereiche für Schule oder private Projekte erstellen." },
+            { id: "step_input_zone", title: "🎨 Eingabe & Tags", text: "Erstelle hier neue Einträge und generiere beliebig viele eigene Tags mit Wunschfarben." },
+            { id: "step_kanban_board", title: "📋 Kanban Board", text: "Verschiebe deine Aufgaben flexibel mit den Pfeiltasten zwischen den Spalten." },
+            { id: "step_backup_zone", title: "🔒 Lokale Backups", text: "Lade deine gesamten Boards passwortgeschützt als TXT-Datei herunter oder spiele alte Backups ein." }
+        ];
+
+        // Überprüfung, ob Krypto-API im Browser erlaubt/verfügbar ist
+        const isCryptoAvailable = !!(window.crypto && window.crypto.subtle);
+        document.getElementById('crypto-status-indicator').textContent = isCryptoAvailable 
+            ? "🔒 Daten-Verschlüsselung lokal via AES-GCM aktiv" 
+            : "🔓 Lokaler Testmodus (Verschlüsselung wegen HTTP blockiert)";
+
+        function saveAllData() {
+            localStorage.setItem('ng_onboarding_done', JSON.stringify(state.onboardingDone));
+            localStorage.setItem('ng_workspaces_manifest', JSON.stringify(state.workspaces));
+            localStorage.setItem('ng_active_workspace', state.activeWorkspace);
+            localStorage.setItem('ng_custom_tags', JSON.stringify(state.tags));
+            localStorage.setItem(`ng_tasks_${state.activeWorkspace}`, JSON.stringify(tasks));
+            localStorage.setItem(`ng_archive_${state.activeWorkspace}`, JSON.stringify(archive));
+        }
+
+        // --- SPOTLIGHT ONBOARDING ENGINE ---
+        if (!state.onboardingDone) {
+            document.getElementById('initialWelcomeCard').style.display = 'flex';
+        } else {
+            document.getElementById('initialWelcomeCard').style.display = 'none';
+        }
+
+        function abortTour() {
+            state.onboardingDone = true;
+            saveAllData();
+            document.getElementById('initialWelcomeCard').style.display = 'none';
+            document.getElementById('tourBox').style.display = 'none';
+            document.getElementById('spotlightOverlay').style.display = 'none';
+            clearSpotlights();
+        }
+
+        function startSpotlightTour() {
+            document.getElementById('initialWelcomeCard').style.display = 'none';
+            document.getElementById('spotlightOverlay').style.display = 'block';
+            document.getElementById('tourBox').style.display = 'flex';
+            currentTourStep = 0;
+            showStep();
+        }
+
+        function clearSpotlights() {
+            document.querySelectorAll('.spotlight-active').forEach(el => el.classList.remove('spotlight-active'));
+        }
+
+        function showStep() {
+            clearSpotlights();
+            if (currentTourStep >= tourSteps.length) {
+                abortTour();
+                return;
+            }
+
+            const step = tourSteps[currentTourStep];
+            const targetEl = document.getElementById(step.id);
+            
+            if (targetEl) {
+                targetEl.classList.add('spotlight-active');
+                const rect = targetEl.getBoundingClientRect();
+                const box = document.getElementById('tourBox');
+                
+                if (step.id === 'step_sidebar' || step.id === 'step_backup_zone') {
+                    box.style.left = `${rect.right + 20}px`;
+                    box.style.top = `${rect.top + 40}px`;
+                } else {
+                    box.style.left = `${rect.left + 20}px`;
+                    box.style.top = `${rect.bottom + 20}px`;
+                }
+            }
+
+            document.getElementById('tourTitle').textContent = step.title;
+            document.getElementById('tourText').textContent = step.text;
+            
+            const nextBtn = document.getElementById('tourNextBtn');
+            if (currentTourStep === tourSteps.length - 1) {
+                nextBtn.textContent = "Fertig!";
+            } else {
+                nextBtn.textContent = "Weiter";
+            }
+            
+            nextBtn.onclick = () => {
+                currentTourStep++;
+                showStep();
+            };
+        }
+
+        // --- DYNAMISCHE TAG ENGINE ---
+        function createNewCustomTag() {
+            const nameInput = document.getElementById('newTagName');
+            const colorInput = document.getElementById('newTagColor');
+            const name = nameInput.value.trim().toLowerCase();
+
+            if (!name) return;
+            if (state.tags.some(t => t.name === name)) { alert("Tag existiert bereits!"); return; }
+
+            state.tags.push({ name: name, color: colorInput.value });
+            saveAllData();
+            renderTagSelect();
+            nameInput.value = "";
+        }
+
+        function renderTagSelect() {
+            const select = document.getElementById('tagSelect');
+            select.innerHTML = '';
+            state.tags.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.name;
+                opt.textContent = `🏷️ ${t.name.toUpperCase()}`;
+                select.appendChild(opt);
+            });
+        }
+
+        // --- WORKSPACE SYSTEM ---
+        function switchWorkspace(wsName) {
+            state.activeWorkspace = wsName;
+            tasks = JSON.parse(localStorage.getItem(`ng_tasks_${state.activeWorkspace}`)) || [];
+            archive = JSON.parse(localStorage.getItem(`ng_archive_${state.activeWorkspace}`)) || [];
+            saveAllData();
+            renderWorkspaceList();
+            renderBoard();
+        }
+
+        function addNewWorkspace() {
+            const name = prompt("Name des neuen Workspaces:").trim();
+            if (!name || state.workspaces.includes(name)) return;
+            state.workspaces.push(name);
+            switchWorkspace(name);
+        }
+
+        function removeWorkspace(wsName, event) {
+            event.stopPropagation();
+            if (state.workspaces.length <= 1) { alert("Mindestens ein Workspace muss aktiv bleiben."); return; }
+            if (!confirm(`Workspace "${wsName}" löschen?`)) return;
+            
+            state.workspaces = state.workspaces.filter(w => w !== wsName);
+            localStorage.removeItem(`ng_tasks_${wsName}`);
+            localStorage.removeItem(`ng_archive_${wsName}`);
+            
+            if (state.activeWorkspace === wsName) {
+                switchWorkspace(state.workspaces[0]);
+            } else {
+                saveAllData();
+                renderWorkspaceList();
+            }
+        }
+
+        function renderWorkspaceList() {
+            const list = document.getElementById('workspace-menu-list');
+            list.innerHTML = '';
+            document.getElementById('current-workspace-title').textContent = state.activeWorkspace;
+
+            state.workspaces.forEach(ws => {
+                const li = document.createElement('li');
+                li.className = `menu-item ${ws === state.activeWorkspace ? 'active' : ''}`;
+                li.onclick = () => switchWorkspace(ws);
+                li.innerHTML = `<span>📂 ${ws}</span><button class="delete-ws-btn" onclick="removeWorkspace('${ws}', event)">✕</button>`;
+                list.appendChild(li);
+            });
+        }
+
+        // --- CRYPTO ENGINE FALLBACK LOGIK ---
+        async function deriveKey(password, salt) {
+            if (!isCryptoAvailable) return null;
+            const enc = new TextEncoder();
+            const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+            return crypto.subtle.deriveKey(
+                { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+                baseKey, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+            );
+        }
+
+        function openBackupModal(mode) {
+            document.getElementById('cryptoPassword').value = "";
+            const submitBtn = document.getElementById('cryptoSubmitBtn');
+            const pwdInput = document.getElementById('cryptoPassword');
+            const desc = document.getElementById('backupModalDesc');
+            document.getElementById('backupModal').style.display = 'flex';
+
+            if (!isCryptoAvailable) {
+                pwdInput.style.display = "none";
+                desc.textContent = "💡 Testmodus aktiv (Kein HTTPS): Das Backup wird als unverschlüsselte Textdatei gesichert.";
+            } else {
+                pwdInput.style.display = "block";
+                desc.textContent = "Gib ein Passwort ein, um deine Boards verschlüsselt zu sichern.";
+            }
+
+            if (mode === 'export') {
+                document.getElementById('backupModalTitle').textContent = isCryptoAvailable ? "🔒 Master-Backup exportieren" : "📋 Backup exportieren";
+                submitBtn.textContent = "Herunterladen (.txt)";
+                submitBtn.onclick = executeExport;
+            } else {
+                document.getElementById('backupModalTitle').textContent = isCryptoAvailable ? "🔓 Master-Backup einspielen" : "📂 Backup einspielen";
+                submitBtn.textContent = "Datei auswählen...";
+                submitBtn.onclick = () => document.getElementById('importFile').click();
+            }
+        }
+
+        async function executeExport() {
+            const pwd = document.getElementById('cryptoPassword').value;
+            if (isCryptoAvailable && !pwd) { alert("Bitte Passwort angeben!"); return; }
+
+            try {
+                const fullVault = { version: "v3-master-crypto", meta: state, payloads: {} };
+                state.workspaces.forEach(ws => {
+                    fullVault.payloads[ws] = {
+                        tasks: JSON.parse(localStorage.getItem(`ng_tasks_${ws}`)) || [],
+                        archive: JSON.parse(localStorage.getItem(`ng_archive_${ws}`)) || []
+                    };
+                });
+
+                let outputText = "";
+
+                if (isCryptoAvailable) {
+                    // Verschlüsselter Pfad (HTTPS / GitHub Pages)
+                    const enc = new TextEncoder();
+                    const dataBytes = enc.encode(JSON.stringify(fullVault));
+                    const salt = crypto.getRandomValues(new Uint8Array(16));
+                    const iv = crypto.getRandomValues(new Uint8Array(12));
+                    
+                    const key = await deriveKey(pwd, salt);
+                    const encryptedBytes = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, dataBytes);
+
+                    const packed = new Uint8Array(salt.byteLength + iv.byteLength + encryptedBytes.byteLength);
+                    packed.set(salt, 0); 
+                    packed.set(iv, salt.byteLength); 
+                    packed.set(new Uint8Array(encryptedBytes), salt.byteLength + iv.byteLength);
+
+                    const base64Blob = new Blob([packed]);
+                    const fileReader = new FileReader();
+                    fileReader.onload = function(event) {
+                        triggerDownload(event.target.result.split(',')[1]);
+                    };
+                    fileReader.readAsDataURL(base64Blob);
+                } else {
+                    // Unverschlüsselter Test-Fallback Pfad (Lokaler Server über HTTP)
+                    outputText = "NG_UNENCRYPTED_BACKUP:" + btoa(unescape(encodeURIComponent(JSON.stringify(fullVault))));
+                    triggerDownload(outputText);
+                }
+            } catch (err) {
+                alert("Fehler beim Erstellen des Backups: " + err.message);
+            }
+        }
+
+        function triggerDownload(contentString) {
+            const blob = new Blob([contentString], { type: "text/plain" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `ng_workspace_backup_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+            closeModal('backupModal');
+        }
+
+        function processImport(fileInput) {
+            const pwd = document.getElementById('cryptoPassword').value;
+            const file = fileInput.files[0]; if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const fileContent = e.target.result.trim();
+                    let importedVault = null;
+
+                    if (fileContent.startsWith("NG_UNENCRYPTED_BACKUP:")) {
+                        // Unverschlüsselter Fallback-Import (Lokal getestet)
+                        const base64Part = fileContent.replace("NG_UNENCRYPTED_BACKUP:", "");
+                        importedVault = JSON.parse(decodeURIComponent(escape(atob(base64Part))));
+                    } else {
+                        // Verschlüsselter Import (Produktiv-Modus)
+                        if (!isCryptoAvailable) {
+                            alert("Dieses Backup ist verschlüsselt, aber dein lokaler Test-Server läuft ohne HTTPS. Lade die Datei auf GitHub Pages hoch, um sie einzuspielen!");
+                            return;
+                        }
+                        if (!pwd) { alert("Bitte gib das Passwort für diese Datei ein!"); return; }
+
+                        const rawBinary = atob(fileContent);
+                        const packed = new Uint8Array(rawBinary.length).map((_, i) => rawBinary.charCodeAt(i));
+                        const salt = packed.slice(0, 16); const iv = packed.slice(16, 28); const ciphertext = packed.slice(28);
+
+                        const key = await deriveKey(pwd, salt);
+                        const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ciphertext);
+                        
+                        const dec = new TextDecoder();
+                        importedVault = JSON.parse(dec.decode(decryptedBuffer));
+                    }
+
+                    if (importedVault && importedVault.version === "v3-master-crypto") {
+                        state = importedVault.meta;
+                        localStorage.setItem('ng_onboarding_done', JSON.stringify(state.onboardingDone));
+                        localStorage.setItem('ng_workspaces_manifest', JSON.stringify(state.workspaces));
+                        localStorage.setItem('ng_active_workspace', state.activeWorkspace);
+                        localStorage.setItem('ng_custom_tags', JSON.stringify(state.tags));
+
+                        Object.keys(importedVault.payloads).forEach(ws => {
+                            localStorage.setItem(`ng_tasks_${ws}`, JSON.stringify(importedVault.payloads[ws].tasks));
+                            localStorage.setItem(`ng_archive_${ws}`, JSON.stringify(importedVault.payloads[ws].archive));
+                        });
+
+                        tasks = JSON.parse(localStorage.getItem(`ng_tasks_${state.activeWorkspace}`)) || [];
+                        archive = JSON.parse(localStorage.getItem(`ng_archive_${state.activeWorkspace}`)) || [];
+                        
+                        renderWorkspaceList();
+                        renderTagSelect();
+                        renderBoard();
+                        alert("Backup erfolgreich wiederhergestellt!");
+                        closeModal('backupModal');
+                    }
+                } catch (err) {
+                    alert("Import fehlgeschlagen. Falsches Passwort oder beschädigte Datei!");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // --- ARCHIV ---
+        function openArchive() { document.getElementById('archiveModal').style.display = 'flex'; renderArchive(); }
+
+        function renderArchive() {
+            const container = document.getElementById('archive-list-container');
+            container.innerHTML = ''; document.getElementById('archive-count-title').textContent = archive.length;
+
+            if(archive.length === 0) {
+                container.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;">Das Archiv ist leer.</li>`;
+                return;
+            }
+
+            archive.forEach((item, index) => {
+                const targetTag = state.tags.find(t => t.name === item.tag) || { color: '#525966' };
+                const li = document.createElement('li'); li.className = 'archive-item';
+                li.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <span class="dynamic-tag" style="background-color: ${targetTag.color}">${item.tag}</span>
+                        <span>${item.text}</span>
+                    </div>
+                    <button class="action-btn delete" onclick="deleteFromArchive(${index})">🗑 Löschen</button>
+                `;
+                container.appendChild(li);
+            });
+        }
+
+        function archiveTask(id) {
+            const taskToArchive = tasks.find(t => t.id === id);
+            archive.push(taskToArchive); tasks = tasks.filter(t => t.id !== id);
+            saveAllData(); renderBoard();
+        }
+
+        function deleteFromArchive(index) { archive.splice(index, 1); saveAllData(); renderArchive(); }
+
+        // --- KANBAN LOGIK ---
         const taskInput = document.getElementById('taskInput');
         const tagSelect = document.getElementById('tagSelect');
         const addBtn = document.getElementById('addBtn');
 
-        function saveToLocalStorage() {
-            localStorage.setItem('workspace_tasks_v7', JSON.stringify(tasks));
-        }
-
         function createNewTask() {
             const text = taskInput.value.trim();
-            if (text === "") return;
+            if (text === "" || tagSelect.value === "") return;
 
             const newTask = {
                 id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                text: text,
-                tag: tagSelect.value,
-                status: 'todo'
+                text: text, tag: tagSelect.value, status: 'todo'
             };
 
-            tasks.push(newTask);
-            saveToLocalStorage();
-            renderBoard();
-
-            taskInput.value = "";
-            taskInput.focus();
+            tasks.push(newTask); saveAllData(); renderBoard();
+            taskInput.value = ""; taskInput.focus();
         }
 
         function moveTask(id, newStatus) {
-            tasks = tasks.map(task => {
-                if (task.id === id) task.status = newStatus;
-                return task;
-            });
-            saveToLocalStorage();
-            renderBoard();
+            tasks = tasks.map(task => { if (task.id === id) task.status = newStatus; return task; });
+            saveAllData(); renderBoard();
         }
 
-        function deleteTask(id) {
-            tasks = tasks.filter(task => task.id !== id);
-            saveToLocalStorage();
-            renderBoard();
-        }
+        function deleteTask(id) { tasks = tasks.filter(task => task.id !== id); saveAllData(); renderBoard(); }
 
         function renderBoard() {
             document.getElementById('todo-list').innerHTML = '';
             document.getElementById('progress-list').innerHTML = '';
             document.getElementById('done-list').innerHTML = '';
-
             let counts = { todo: 0, progress: 0, done: 0 };
 
             tasks.forEach(task => {
                 counts[task.status]++;
+                const matchedTag = state.tags.find(t => t.name === task.tag) || { color: '#525966' };
 
-                const li = document.createElement('li');
-                li.className = 'task-card';
+                const li = document.createElement('li'); li.className = 'task-card';
+                li.style.borderLeft = `4px solid ${matchedTag.color}`;
 
-                const tagSpan = document.createElement('span');
-                tagSpan.className = `tag ${task.tag}`;
-                tagSpan.textContent = task.tag;
-                li.appendChild(tagSpan);
+                const tagSpan = document.createElement('span'); tagSpan.className = 'dynamic-tag';
+                tagSpan.style.backgroundColor = matchedTag.color; tagSpan.textContent = task.tag; li.appendChild(tagSpan);
 
-                const textSpan = document.createElement('span');
-                textSpan.className = 'task-text';
-                textSpan.textContent = task.text;
-                li.appendChild(textSpan);
+                const textSpan = document.createElement('span'); textSpan.className = 'task-text'; textSpan.textContent = task.text; li.appendChild(textSpan);
+                const footer = document.createElement('div'); footer.className = 'task-footer';
+                const actionsDiv = document.createElement('div'); actionsDiv.className = 'task-actions';
 
-                const footer = document.createElement('div');
-                footer.className = 'task-footer';
-
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'task-actions';
-
-                // Zurück-Button (wenn nicht in 'todo')
                 if (task.status === 'progress' || task.status === 'done') {
-                    const backBtn = document.createElement('button');
-                    backBtn.className = 'action-btn';
-                    backBtn.textContent = '◀';
+                    const backBtn = document.createElement('button'); backBtn.className = 'action-btn'; backBtn.textContent = '◀';
                     backBtn.onclick = () => moveTask(task.id, task.status === 'done' ? 'progress' : 'todo');
                     actionsDiv.appendChild(backBtn);
                 }
+                
+                const delBtn = document.createElement('button'); delBtn.className = 'action-btn delete'; delBtn.textContent = '🗑';
+                delBtn.onclick = () => deleteTask(task.id); actionsDiv.appendChild(delBtn);
 
-                // Löschen-Button
-                const delBtn = document.createElement('button');
-                delBtn.className = 'action-btn delete';
-                delBtn.textContent = '🗑';
-                delBtn.onclick = () => deleteTask(task.id);
-
-                // Vorwärts-Button (wenn nicht in 'done')
                 if (task.status === 'todo' || task.status === 'progress') {
-                    const nextBtn = document.createElement('button');
-                    nextBtn.className = 'action-btn';
-                    nextBtn.textContent = task.status === 'todo' ? '▶' : '✔';
+                    const nextBtn = document.createElement('button'); nextBtn.className = 'action-btn'; nextBtn.textContent = task.status === 'todo' ? '▶' : '✔';
                     nextBtn.onclick = () => moveTask(task.id, task.status === 'todo' ? 'progress' : 'done');
                     actionsDiv.appendChild(nextBtn);
                 }
 
-                actionsDiv.insertBefore(delBtn, actionsDiv.children[1] || null);
-                footer.appendChild(actionsDiv);
-                li.appendChild(footer);
+                if (task.status === 'done') {
+                    const arcBtn = document.createElement('button'); arcBtn.className = 'action-btn archive'; arcBtn.textContent = '📦 Archiv';
+                    arcBtn.onclick = () => archiveTask(task.id); actionsDiv.appendChild(arcBtn);
+                }
 
+                footer.appendChild(actionsDiv); li.appendChild(footer);
                 document.getElementById(`${task.status}-list`).appendChild(li);
             });
 
@@ -366,11 +796,11 @@
         }
 
         addBtn.addEventListener('click', createNewTask);
-        taskInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') createNewTask();
-        });
+        taskInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') createNewTask(); });
 
-        // Board beim ersten Laden aufbauen
+        // App starten
+        renderWorkspaceList();
+        renderTagSelect();
         renderBoard();
     </script>
 </body>
