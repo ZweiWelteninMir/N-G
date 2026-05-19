@@ -168,7 +168,6 @@
             margin-top: 5px;
         }
 
-        /* QR-Code Cursor-Feedback für Klickbarkeit */
         #qrCanvas {
             background: white;
             padding: 12px;
@@ -178,7 +177,6 @@
         }
         #qrCanvas:hover { transform: scale(1.02); }
 
-        /* Vergrößertes Scan-Feld für bessere Erkennung */
         #videoScanner {
             width: 100%;
             max-width: 360px;
@@ -189,7 +187,7 @@
             border: 1px solid #242936;
         }
 
-        /* --- QR-MODAL OVERLAY (GROSSANSICHT) --- */
+        /* --- QR-MODAL OVERLAY --- */
         .qr-modal {
             display: none;
             position: fixed;
@@ -283,7 +281,6 @@
         button.sec-btn:hover { background-color: #242936; }
         button.sync-btn { background: #2eaadc; color: white; }
         
-        /* Action-Button für manuellen Scan-Trigger */
         button.action-trigger-btn {
             background: linear-gradient(135deg, #2eaadc, #22c55e);
             color: white;
@@ -356,7 +353,6 @@
 </head>
 <body>
 
-    <!-- Vollbild-Modal für vergrößerten QR-Code -->
     <div class="qr-modal" id="qrModal" onclick="closeQRModal()">
         <canvas id="modalCanvas"></canvas>
         <div class="modal-tip">Klicken zum Schließen</div>
@@ -394,10 +390,8 @@
                 </div>
                 
                 <div id="cryptoArea" class="sync-area">
-                    <!-- Klickbarer Canvas für Vergrößerung -->
                     <canvas id="qrCanvas" onclick="openQRModal()" title="Klicken zum Vergrößern"></canvas>
                     <video id="videoScanner" autoplay playsinline style="display:none;"></video>
-                    <!-- Manueller Scan-Button -->
                     <button id="scanTriggerBtn" class="action-trigger-btn" style="display:none;" onclick="triggerSingleScan()">📷 Code jetzt erfassen</button>
                     <span id="instructionText" style="font-size:12px; color:#a0a6b3; text-align:center; max-width:340px;"></span>
                 </div>
@@ -476,13 +470,11 @@
             menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
         }
 
-        // --- OVERLAY-LOGIK (MODAL) ---
         function openQRModal() {
             if (!currentToken) return;
             const modal = document.getElementById('qrModal');
             const modalCanvas = document.getElementById('modalCanvas');
             modal.style.display = 'flex';
-            // Zeichnet den QR-Code riesig im Overlay
             new QRious({ element: modalCanvas, value: currentToken, size: 380 });
         }
 
@@ -510,7 +502,6 @@
             currentToken = "";
         }
 
-        // --- DER KOPPLUNGS-STRANG ---
         async function initiateConnection(showQR) {
             document.getElementById('syncDropdown').style.display = 'none';
             document.getElementById('cryptoArea').style.display = 'flex';
@@ -551,15 +542,24 @@
                 video.style.display = 'block';
 
                 try {
-                    streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    // OPTIMIERUNG 1 & 2: HD-Auflösung und Autofokus-Befehl erzwingen
+                    const constraints = {
+                        video: {
+                            facingMode: "environment",
+                            width: { ideal: 1920, min: 1280 },
+                            height: { ideal: 1080, min: 720 },
+                            focusMode: "continuous"
+                        }
+                    };
+                    
+                    streamInstance = await navigator.mediaDevices.getUserMedia(constraints);
                     video.srcObject = streamInstance;
                     
                     await video.play();
                     document.getElementById('statusText').textContent = 'Kamera aktiv';
-                    document.getElementById('instructionText').textContent = 'Ziele auf den QR-Code und drücke den Button zum Einlesen.';
+                    document.getElementById('instructionText').textContent = 'Ziele mittig auf den QR-Code und drücke den Button.';
                     document.getElementById('scanTriggerBtn').style.display = 'block';
 
-                    // Parser-Bibliothek im Hintergrund laden, falls nötig
                     if (!window.jsQR && !window.BarcodeDetector) {
                         await new Promise(resolve => {
                             const script = document.createElement('script');
@@ -572,27 +572,44 @@
                 } catch (err) {
                     console.error("Kamerafehler:", err);
                     document.getElementById('statusText').textContent = 'Kamera blockiert!';
-                    document.getElementById('instructionText').textContent = 'Zugriff verweigert oder keine Kamera gefunden.';
+                    document.getElementById('instructionText').textContent = 'Fehler beim Kamera-Zugriff. Versuche es erneut.';
                 }
             }
         }
 
-        // --- MANUELLER SCAN TRIGGER ---
+        // --- MANUELLER SCAN TRIGGER MIT BILD-BOOSTER ---
         async function triggerSingleScan() {
             const video = document.getElementById('videoScanner');
             if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
 
-            document.getElementById('statusText').textContent = 'Erfasse...';
+            document.getElementById('statusText').textContent = 'Verarbeite Bild...';
 
             const scanCanvas = document.createElement('canvas');
             const context = scanCanvas.getContext('2d');
+            
+            // Nutze die native, hohe Auflösung des Videostreams
             scanCanvas.width = video.videoWidth;
             scanCanvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
 
+            // OPTIMIERUNG 3: Kontrast- und Schärfebooster via Canvas-Filter anwenden
+            const imageData = context.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+            const data = imageData.data;
+            
+            // Einfacher, schneller Schwellenwert-Filter (Binarisierung für perfekten Schwarz-Weiß-Kontrast)
+            for (let i = 0; i < data.length; i += 4) {
+                const brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
+                // Wenn der Pixel eher dunkel ist -> tiefschwarz, sonst reinweiß
+                const v = (brightness < 128) ? 0 : 255;
+                data[i] = v;     // R
+                data[i + 1] = v; // G
+                data[i + 2] = v; // B
+            }
+            context.putImageData(imageData, 0, 0);
+
             let codeFound = null;
 
-            // Option 1: Native API ausprobieren
+            // Versuche native Erkennung (falls vom Browser unterstützt)
             if (window.BarcodeDetector) {
                 try {
                     const detector = new BarcodeDetector({ formats: ['qr_code'] });
@@ -603,10 +620,9 @@
                 } catch(e) { console.error(e); }
             }
 
-            // Option 2: Fallback auf jsQR
+            // Fallback auf optimiertes jsQR
             if (!codeFound && window.jsQR) {
-                const imageData = context.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-                const decoded = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                const decoded = jsQR(data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
                 if (decoded && decoded.data) {
                     codeFound = decoded.data;
                 }
@@ -616,7 +632,7 @@
                 handleScannedToken(codeFound);
             } else {
                 document.getElementById('statusText').textContent = 'Nicht erkannt!';
-                document.getElementById('instructionText').textContent = 'Code nicht gefunden. Bitte näher ranhalten oder QR vergrößern und erneut drücken.';
+                document.getElementById('instructionText').innerHTML = '<b>Fehlgeschlagen.</b> Vergrößere den QR-Code auf dem anderen Gerät (anklicken!) und halte dein Handy ruhiger.';
             }
         }
 
@@ -626,7 +642,7 @@
                 streamInstance.getTracks().forEach(track => track.stop());
             }
             document.getElementById('videoScanner').style.display = 'none';
-            document.getElementById('statusText').textContent = 'Verarbeite...';
+            document.getElementById('statusText').textContent = 'Koppele...';
 
             try {
                 const remoteDesc = JSON.parse(atob(decodedText));
