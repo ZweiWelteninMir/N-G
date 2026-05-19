@@ -140,7 +140,7 @@
             border-radius: 8px;
             box-shadow: 0 8px 16px rgba(0,0,0,0.3);
             z-index: 10;
-            min-width: 160px;
+            min-width: 180px;
             overflow: hidden;
         }
 
@@ -180,11 +180,31 @@
         #videoScanner {
             width: 100%;
             max-width: 360px;
-            height: 270px;
+            height: 200px;
             object-fit: cover;
             background: #000;
             border-radius: 8px;
             border: 1px solid #242936;
+        }
+
+        /* Fallback Text-Kopplung Bereich */
+        .text-fallback-area {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .fallback-input {
+            width: 100%;
+            padding: 10px;
+            background-color: #1c1f26;
+            border: 1px solid #242936;
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 12px;
+            box-sizing: border-box;
         }
 
         /* --- QR-MODAL OVERLAY --- */
@@ -284,13 +304,23 @@
         button.action-trigger-btn {
             background: linear-gradient(135deg, #2eaadc, #22c55e);
             color: white;
-            padding: 12px 20px;
-            font-size: 14px;
-            border-radius: 8px;
-            margin-top: 5px;
+            padding: 10px 16px;
+            font-size: 13px;
+            border-radius: 6px;
+            width: 100%;
             box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
         }
         button.action-trigger-btn:active { transform: scale(0.98); }
+        
+        button.copy-btn {
+            background-color: #242936;
+            color: #2eaadc;
+            border: 1px solid rgba(46, 170, 220, 0.3);
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 6px;
+        }
+        button.copy-btn:hover { background-color: rgba(46, 170, 220, 0.1); }
 
         /* --- KANBAN BOARD LAYOUT --- */
         .board {
@@ -382,8 +412,8 @@
                     <div class="sync-dropdown-container">
                         <button class="sec-btn sync-btn" id="menuBtn" onclick="toggleDropdown()">⚡ Synchronisieren</button>
                         <div class="dropdown-menu" id="syncDropdown">
-                            <button onclick="initiateConnection(true)">📱 QR-Code anzeigen</button>
-                            <button onclick="initiateConnection(false)">📷 Kamera scannen</button>
+                            <button onclick="initiateConnection(true)">📱 QR-Code / Text-Key anzeigen</button>
+                            <button onclick="initiateConnection(false)">📷 Kamera scan / Key einfügen</button>
                             <button onclick="resetSyncUI()" style="color: #ef4444;">❌ Abbrechen</button>
                         </div>
                     </div>
@@ -393,6 +423,13 @@
                     <canvas id="qrCanvas" onclick="openQRModal()" title="Klicken zum Vergrößern"></canvas>
                     <video id="videoScanner" autoplay playsinline style="display:none;"></video>
                     <button id="scanTriggerBtn" class="action-trigger-btn" style="display:none;" onclick="triggerSingleScan()">📷 Code jetzt erfassen</button>
+                    
+                    <!-- Text Fallback Area für Copy-Paste -->
+                    <div id="textFallbackContainer" class="text-fallback-area" style="display: none;">
+                        <input type="text" id="fallbackInputField" class="fallback-input" readonly onclick="this.select()">
+                        <button id="fallbackActionBtn" class="copy-btn">📋 Code kopieren</button>
+                    </div>
+
                     <span id="instructionText" style="font-size:12px; color:#a0a6b3; text-align:center; max-width:340px;"></span>
                 </div>
             </div>
@@ -487,6 +524,7 @@
             document.getElementById('cryptoArea').style.display = 'none';
             document.getElementById('qrCanvas').style.display = 'none';
             document.getElementById('scanTriggerBtn').style.display = 'none';
+            document.getElementById('textFallbackContainer').style.display = 'none';
             closeQRModal();
             
             const video = document.getElementById('videoScanner');
@@ -511,7 +549,7 @@
 
             if (showQR) {
                 document.getElementById('statusText').textContent = 'Generiere QR...';
-                document.getElementById('instructionText').innerHTML = 'Lass das andere Gerät diesen QR-Code scannen.<br><b>Tipp:</b> Anklicken zum Vergrößern!';
+                document.getElementById('instructionText').innerHTML = 'Scanne den QR-Code oder kopiere den Text-Key unten.';
 
                 dataChannel = localConnection.createDataChannel("workspace_sync");
                 setupDataChannelHandlers();
@@ -522,9 +560,28 @@
                 localConnection.onicecandidate = (e) => {
                     if (!e.candidate) {
                         currentToken = btoa(JSON.stringify(localConnection.localDescription));
+                        
+                        // QR-Code anzeigen
                         const canvas = document.getElementById('qrCanvas');
                         canvas.style.display = 'block';
                         new QRious({ element: canvas, value: currentToken, size: 180 });
+                        
+                        // Text Fallback vorbereiten (Kopieren-Modus)
+                        const fallbackContainer = document.getElementById('textFallbackContainer');
+                        const inputField = document.getElementById('fallbackInputField');
+                        const actionBtn = document.getElementById('fallbackActionBtn');
+                        
+                        fallbackContainer.style.display = 'flex';
+                        inputField.value = currentToken;
+                        inputField.readOnly = true;
+                        actionBtn.textContent = '📋 Code kopieren';
+                        actionBtn.className = 'copy-btn';
+                        actionBtn.onclick = () => {
+                            navigator.clipboard.writeText(currentToken);
+                            actionBtn.textContent = '✅ Kopiert!';
+                            setTimeout(() => { actionBtn.textContent = '📋 Code kopieren'; }, 2000);
+                        };
+
                         document.getElementById('statusText').textContent = 'Bereit!';
                     }
                 };
@@ -536,13 +593,30 @@
 
             } else {
                 document.getElementById('statusText').textContent = 'Kamera anfordern...';
-                document.getElementById('instructionText').textContent = 'Bitte erlaube den Kamera-Zugriff.';
+                document.getElementById('instructionText').textContent = 'Ziele auf den QR-Code oder füge den Code unten manuell ein.';
                 
                 const video = document.getElementById('videoScanner');
                 video.style.display = 'block';
 
+                // Text Fallback vorbereiten (Einfügen-Modus)
+                const fallbackContainer = document.getElementById('textFallbackContainer');
+                const inputField = document.getElementById('fallbackInputField');
+                const actionBtn = document.getElementById('fallbackActionBtn');
+                
+                fallbackContainer.style.display = 'flex';
+                inputField.value = "";
+                inputField.readOnly = false;
+                inputField.placeholder = "Hier kopierten Code einfügen...";
+                actionBtn.textContent = '📥 Code einfügen & verbinden';
+                actionBtn.className = 'action-trigger-btn';
+                actionBtn.style.marginTop = "0";
+                actionBtn.onclick = () => {
+                    if(inputField.value.trim() !== "") {
+                        handleScannedToken(inputField.value.trim());
+                    }
+                };
+
                 try {
-                    // OPTIMIERUNG 1 & 2: HD-Auflösung und Autofokus-Befehl erzwingen
                     const constraints = {
                         video: {
                             facingMode: "environment",
@@ -557,7 +631,6 @@
                     
                     await video.play();
                     document.getElementById('statusText').textContent = 'Kamera aktiv';
-                    document.getElementById('instructionText').textContent = 'Ziele mittig auf den QR-Code und drücke den Button.';
                     document.getElementById('scanTriggerBtn').style.display = 'block';
 
                     if (!window.jsQR && !window.BarcodeDetector) {
@@ -570,14 +643,13 @@
                     }
 
                 } catch (err) {
-                    console.error("Kamerafehler:", err);
-                    document.getElementById('statusText').textContent = 'Kamera blockiert!';
-                    document.getElementById('instructionText').textContent = 'Fehler beim Kamera-Zugriff. Versuche es erneut.';
+                    console.log("Kamera nicht verfügbar oder blockiert. Verwende Text-Fallback.");
+                    document.getElementById('statusText').textContent = 'Kamera aus / Text-Modus';
+                    video.style.display = 'none';
                 }
             }
         }
 
-        // --- MANUELLER SCAN TRIGGER MIT BILD-BOOSTER ---
         async function triggerSingleScan() {
             const video = document.getElementById('videoScanner');
             if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) return;
@@ -587,29 +659,22 @@
             const scanCanvas = document.createElement('canvas');
             const context = scanCanvas.getContext('2d');
             
-            // Nutze die native, hohe Auflösung des Videostreams
             scanCanvas.width = video.videoWidth;
             scanCanvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
 
-            // OPTIMIERUNG 3: Kontrast- und Schärfebooster via Canvas-Filter anwenden
             const imageData = context.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
             const data = imageData.data;
             
-            // Einfacher, schneller Schwellenwert-Filter (Binarisierung für perfekten Schwarz-Weiß-Kontrast)
             for (let i = 0; i < data.length; i += 4) {
                 const brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
-                // Wenn der Pixel eher dunkel ist -> tiefschwarz, sonst reinweiß
                 const v = (brightness < 128) ? 0 : 255;
-                data[i] = v;     // R
-                data[i + 1] = v; // G
-                data[i + 2] = v; // B
+                data[i] = v; data[i + 1] = v; data[i + 2] = v;
             }
             context.putImageData(imageData, 0, 0);
 
             let codeFound = null;
 
-            // Versuche native Erkennung (falls vom Browser unterstützt)
             if (window.BarcodeDetector) {
                 try {
                     const detector = new BarcodeDetector({ formats: ['qr_code'] });
@@ -620,7 +685,6 @@
                 } catch(e) { console.error(e); }
             }
 
-            // Fallback auf optimiertes jsQR
             if (!codeFound && window.jsQR) {
                 const decoded = jsQR(data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
                 if (decoded && decoded.data) {
@@ -632,12 +696,13 @@
                 handleScannedToken(codeFound);
             } else {
                 document.getElementById('statusText').textContent = 'Nicht erkannt!';
-                document.getElementById('instructionText').innerHTML = '<b>Fehlgeschlagen.</b> Vergrößere den QR-Code auf dem anderen Gerät (anklicken!) und halte dein Handy ruhiger.';
+                document.getElementById('instructionText').innerHTML = '<b>Kamera-Scan fehlgeschlagen.</b> Nutze das Textfeld unten, um den Code manuell einzufügen!';
             }
         }
 
         async function handleScannedToken(decodedText) {
             document.getElementById('scanTriggerBtn').style.display = 'none';
+            document.getElementById('textFallbackContainer').style.display = 'none';
             if (streamInstance) {
                 streamInstance.getTracks().forEach(track => track.stop());
             }
@@ -655,11 +720,29 @@
                     localConnection.onicecandidate = (e) => {
                         if (!e.candidate) {
                             currentToken = btoa(JSON.stringify(localConnection.localDescription));
+                            
                             const canvas = document.getElementById('qrCanvas');
                             canvas.style.display = 'block';
                             new QRious({ element: canvas, value: currentToken, size: 180 });
+                            
+                            // Antwort-Key zum Zurückkopieren bereitstellen
+                            const fallbackContainer = document.getElementById('textFallbackContainer');
+                            const inputField = document.getElementById('fallbackInputField');
+                            const actionBtn = document.getElementById('fallbackActionBtn');
+                            
+                            fallbackContainer.style.display = 'flex';
+                            inputField.value = currentToken;
+                            inputField.readOnly = true;
+                            actionBtn.textContent = '📋 Antwort-Key kopieren';
+                            actionBtn.className = 'copy-btn';
+                            actionBtn.onclick = () => {
+                                navigator.clipboard.writeText(currentToken);
+                                actionBtn.textContent = '✅ Kopiert!';
+                                setTimeout(() => { actionBtn.textContent = '📋 Antwort-Key kopieren'; }, 2000);
+                            };
+
                             document.getElementById('statusText').textContent = 'Antwort bereit!';
-                            document.getElementById('instructionText').innerHTML = 'Scanne nun diesen Code mit dem ersten Gerät ein.<br><b>Tipp:</b> Anklicken zum Vergrößern!';
+                            document.getElementById('instructionText').innerHTML = 'Füge diese Antwort nun wieder auf dem ersten Gerät ein.';
                         }
                     };
                     
