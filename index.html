@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N/G - Mein Workspace</title>
+    <!-- Nur noch ein einziges, leichtes Skript für die QR-Code-Generierung -->
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0d0e12;
+            color: #e3e6ed;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* --- SEITENLEISTE --- */
+        .sidebar {
+            width: 240px;
+            background-color: #13151a;
+            border-right: 1px solid #1f232d;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .logo-area {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #ffffff;
+        }
+        .logo-area span { color: #2eaadc; }
+
+        .sidebar-section h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #525966;
+            margin: 0 0 12px 0;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: #a0a6b3;
+            font-size: 14px;
+        }
+
+        .menu-item.active {
+            background-color: #1c1f26;
+            color: #ffffff;
+        }
+
+        /* --- HAUPTBEREICH --- */
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* --- FLEXIBLES KOPPLUNGS PANEL --- */
+        .sync-panel {
+            background-color: #13151a;
+            border: 1px solid #1f232d;
+            border-radius: 10px;
+            padding: 12px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            max-width: 450px;
+        }
+
+        .sync-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .sync-status {
+            font-size: 13px;
+            color: #a0a6b3;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+        }
+        .status-dot.connected { background-color: #22c55e; }
+        .status-dot.searching { background-color: #eab308; }
+
+        /* Dropdown Menü direkt am Button */
+        .sync-dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 110%;
+            background-color: #1c1f26;
+            border: 1px solid #242936;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            z-index: 10;
+            min-width: 160px;
+            overflow: hidden;
+        }
+
+        .dropdown-menu button {
+            width: 100%;
+            text-align: left;
+            padding: 10px 14px;
+            background: none;
+            color: #e3e6ed;
+            font-size: 13px;
+            border-radius: 0;
+            border-bottom: 1px solid #242936;
+        }
+        .dropdown-menu button:last-child { border-bottom: none; }
+        .dropdown-menu button:hover { background-color: #242936; color: #ffffff; }
+
+        .sync-area {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 10px 0;
+            border-top: 1px solid #1f232d;
+            margin-top: 5px;
+        }
+
+        #qrCanvas {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        /* Natives Video-Element für schnellen, schlanken Kamera-Stream */
+        #videoScanner {
+            width: 240px;
+            height: 240px;
+            object-fit: cover;
+            background: #000;
+            border-radius: 8px;
+            border: 1px solid #242936;
+            transform: scaleX(-1); /* Spiegelt die Frontkamera für leichtere Bedienung */
+        }
+
+        /* Eingabebereich */
+        .input-wrapper {
+            background: linear-gradient(135deg, rgba(46, 170, 220, 0.1), rgba(161, 85, 230, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .input-row { display: flex; gap: 12px; }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 18px;
+            border: 1px solid #1f232d;
+            border-radius: 8px;
+            background-color: #13151a;
+            color: #ffffff;
+            font-size: 15px;
+        }
+        input:focus { outline: none; border-color: #2eaadc; }
+
+        select {
+            padding: 14px;
+            border: 1px solid #1f232d;
+            border-radius: 8px;
+            background-color: #13151a;
+            color: #ffffff;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        button.primary-btn {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #2eaadc, #a155e6);
+            color: white;
+            font-size: 15px;
+            border-radius: 8px;
+        }
+
+        button.sec-btn {
+            background-color: #1c1f26;
+            border: 1px solid #242936;
+            color: #ffffff;
+            font-size: 12px;
+        }
+        button.sec-btn:hover { background-color: #242936; }
+        button.sync-btn { background: #2eaadc; color: white; }
+
+        /* --- KANBAN BOARD LAYOUT --- */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .column {
+            background-color: #13151a;
+            border: 1px solid #1f232d;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #1f232d;
+        }
+
+        .column-header h2 { font-size: 14px; margin: 0; color: #ffffff; text-transform: uppercase; }
+        .counter { background-color: #1f232d; color: #a0a6b3; padding: 2px 8px; border-radius: 20px; font-size: 11px; }
+        .task-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; flex-grow: 1; }
+
+        /* --- KARTEN DESIGN --- */
+        .task-card {
+            background-color: #1c1f26;
+            border: 1px solid #242936;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #todo-list .task-card { border-left: 3px solid #2eaadc; }
+        #progress-list .task-card { border-left: 3px solid #a155e6; }
+        #done-list .task-card { border-left: 3px solid #22c55e; }
+
+        .task-text { font-size: 15px; color: #e3e6ed; word-break: break-word; }
+        .tag { display: inline-block; align-self: flex-start; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .tag.wichtig { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .tag.notiz { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .tag.goodnotes { background-color: rgba(168, 85, 247, 0.15); color: #a855f7; }
+        .task-footer { display: flex; justify-content: space-between; align-items: center; }
+        .task-actions { display: flex; gap: 6px; }
+
+        .action-btn { background-color: #13151a; border: 1px solid #242936; color: #a0a6b3; padding: 6px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+        .action-btn.delete { color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+
+        .status-bar { margin-top: auto; font-size: 12px; color: #525966; display: flex; justify-content: space-between; border-top: 1px solid #1f232d; padding-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-area">N<span>/</span>G</div>
+        <div class="sidebar-section">
+            <h3>Übersicht</h3>
+            <ul class="sidebar-menu">
+                <li class="menu-item active">💻 Workspace</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content">
+        
+        <div class="header-bar">
+            <h1>Mein Workspace</h1>
+            
+            <!-- Kopplungs-Panel mit Dropdown-Menü -->
+            <div class="sync-panel">
+                <div class="sync-header">
+                    <div class="sync-status">
+                        <span id="statusDot" class="status-dot"></span>
+                        <span id="statusText">Lokal Autark</span>
+                    </div>
+                    <div class="sync-dropdown-container">
+                        <button class="sec-btn sync-btn" id="menuBtn" onclick="toggleDropdown()">⚡ Synchronisieren</button>
+                        <div class="dropdown-menu" id="syncDropdown">
+                            <button onclick="initiateConnection(true)">📱 QR-Code anzeigen</button>
+                            <button onclick="initiateConnection(false)">📷 Kamera scannen</button>
+                            <button onclick="resetSyncUI()" style="color: #ef4444;">❌ Abbrechen</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="cryptoArea" class="sync-area">
+                    <canvas id="qrCanvas" style="display:none;"></canvas>
+                    <video id="videoScanner" autoplay playsinline style="display:none;"></video>
+                    <span id="instructionText" style="font-size:12px; color:#a0a6b3; text-align:center; max-width:280px;"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-wrapper">
+            <div class="input-row">
+                <input type="text" id="taskInput" placeholder="Neue Aufgabe, Notiz oder Link hinzufügen..." autocomplete="off">
+                <select id="tagSelect">
+                    <option value="notiz">🔵 Notiz</option>
+                    <option value="wichtig">🔴 Wichtig</option>
+                    <option value="goodnotes">🟣 GoodNotes</option>
+                </select>
+                <button id="addBtn" class="primary-btn">+ Hinzufügen</button>
+            </div>
+        </div>
+
+        <div class="board">
+            <div class="column">
+                <div class="column-header">
+                    <h2>Zu tun</h2>
+                    <span id="todo-count" class="counter">0</span>
+                </div>
+                <ul id="todo-list" class="task-list"></ul>
+            </div>
+
+            <div class="column">
+                <div class="column-header">
+                    <h2>In Arbeit</h2>
+                    <span id="progress-count" class="counter">0</span>
+                </div>
+                <ul id="progress-list" class="task-list"></ul>
+            </div>
+
+            <div class="column">
+                <div class="column-header">
+                    <h2>Erledigt</h2>
+                    <span id="done-count" class="counter">0</span>
+                </div>
+                <ul id="done-list" class="task-list"></ul>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span>Verbunden mit Go-Server auf http://localhost:54321</span>
+            <span>🔒 Serverloses P2P via QR-Menü (Nativ-Cam)</span>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('workspace_tasks_v7')) || [];
+        
+        const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        let localConnection;
+        let dataChannel;
+        let streamInstance = null;
+        let scanInterval = null;
+
+        const taskInput = document.getElementById('taskInput');
+        const tagSelect = document.getElementById('tagSelect');
+        const addBtn = document.getElementById('addBtn');
+
+        function saveToLocalStorage() {
+            localStorage.setItem('workspace_tasks_v7', JSON.stringify(tasks));
+        }
+
+        function broadcastData() {
+            if (dataChannel && dataChannel.readyState === "open") {
+                dataChannel.send(JSON.stringify(tasks));
+            }
+        }
+
+        function toggleDropdown() {
+            const menu = document.getElementById('syncDropdown');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function resetSyncUI() {
+            document.getElementById('syncDropdown').style.display = 'none';
+            document.getElementById('cryptoArea').style.display = 'none';
+            document.getElementById('qrCanvas').style.display = 'none';
+            
+            const video = document.getElementById('videoScanner');
+            video.style.display = 'none';
+            
+            if (streamInstance) {
+                streamInstance.getTracks().forEach(track => track.stop());
+                streamInstance = null;
+            }
+            clearInterval(scanInterval);
+
+            document.getElementById('statusDot').className = 'status-dot';
+            document.getElementById('statusText').textContent = 'Lokal Autark';
+        }
+
+        // --- DER KOPPLUNGS-STRANG ---
+        async function initiateConnection(showQR) {
+            document.getElementById('syncDropdown').style.display = 'none';
+            document.getElementById('cryptoArea').style.display = 'flex';
+            document.getElementById('statusDot').className = 'status-dot searching';
+            
+            localConnection = new RTCPeerConnection(rtcConfig);
+
+            if (showQR) {
+                // FALL A: QR-Code anzeigen (Agiert als Host)
+                document.getElementById('statusText').textContent = 'Generiere QR...';
+                document.getElementById('instructionText').textContent = 'Lass das andere Gerät diesen QR-Code scannen.';
+
+                dataChannel = localConnection.createDataChannel("workspace_sync");
+                setupDataChannelHandlers();
+
+                const offer = await localConnection.createOffer();
+                await localConnection.setLocalDescription(offer);
+
+                localConnection.onicecandidate = (e) => {
+                    if (!e.candidate) {
+                        const token = btoa(JSON.stringify(localConnection.localDescription));
+                        const canvas = document.getElementById('qrCanvas');
+                        canvas.style.display = 'block';
+                        new QRious({ element: canvas, value: token, size: 180 });
+                        document.getElementById('statusText').textContent = 'Bereit!';
+                    }
+                };
+
+                // Falls wir die Antwort vom Scanner des anderen Geräts verarbeiten
+                localConnection.ondatachannel = (e) => {
+                    dataChannel = e.channel;
+                    setupDataChannelHandlers();
+                };
+
+            } else {
+                // FALL B: Kamera scannen (Agiert als Client)
+                document.getElementById('statusText').textContent = 'Kamera anfordern...';
+                document.getElementById('instructionText').textContent = 'Bitte erlaube den Kamera-Zugriff und halte den QR-Code des anderen Geräts ins Bild.';
+                
+                const video = document.getElementById('videoScanner');
+                video.style.display = 'block';
+
+                try {
+                    // Kamera-Zugriff explizit anfordern (Nutzt bevorzugt die rückseitige Kamera, falls vorhanden)
+                    streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = streamInstance;
+                    document.getElementById('statusText').textContent = 'Scanne...';
+
+                    // QR-Code Scan-Schleife über ein temporäres Canvas im Hintergrund
+                    const scanCanvas = document.createElement('canvas');
+                    const context = scanCanvas.getContext('2d');
+
+                    // Dynamischer Import eines extrem kompakten nativen Barcode-Unterstützers falls verfügbar, sonst Fallback
+                    scanInterval = setInterval(async () => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            scanCanvas.width = video.videoWidth;
+                            scanCanvas.height = video.videoHeight;
+                            context.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
+                            
+                            // Nutzt die native, pfeilschnelle Shape Detection API des Browsers falls vorhanden
+                            if (window.BarcodeDetector) {
+                                const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                                const barcodes = await detector.detect(scanCanvas);
+                                if (barcodes.length > 0) {
+                                    handleScannedToken(barcodes[0].rawValue);
+                                }
+                            } else {
+                                // Fallback: Wenn das System kein integriertes Scanning hat, laden wir kurz im Hintergrund den Parser
+                                if (!window.jsQR) {
+                                    await new Promise(resolve => {
+                                        const script = document.createElement('script');
+                                        script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
+                                        script.onload = resolve;
+                                        document.head.appendChild(script);
+                                    });
+                                }
+                                const imageData = context.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+                                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+                                if (code) {
+                                    handleScannedToken(code.data);
+                                }
+                            }
+                        }
+                    }, 300);
+
+                } catch (err) {
+                    console.error("Kamerafehler:", err);
+                    document.getElementById('statusText').textContent = 'Kamera blockiert!';
+                    document.getElementById('instructionText').textContent = 'Zugriff verweigert oder keine Kamera gefunden.';
+                }
+            }
+        }
+
+        async function handleScannedToken(decodedText) {
+            clearInterval(scanInterval);
+            if (streamInstance) {
+                streamInstance.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById('videoScanner').style.display = 'none';
+            document.getElementById('statusText').textContent = 'Verarbeite...';
+
+            try {
+                const remoteDesc = JSON.parse(atob(decodedText));
+                
+                if (remoteDesc.type === "offer") {
+                    // Wir haben ein Offer gescannt -> Antwort erstellen und als neuen QR anzeigen!
+                    await localConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
+                    const answer = await localConnection.createAnswer();
+                    await localConnection.setLocalDescription(answer);
+
+                    localConnection.onicecandidate = (e) => {
+                        if (!e.candidate) {
+                            const myAnswerToken = btoa(JSON.stringify(localConnection.localDescription));
+                            const canvas = document.getElementById('qrCanvas');
+                            canvas.style.display = 'block';
+                            new QRious({ element: canvas, value: myAnswerToken, size: 180 });
+                            document.getElementById('statusText').textContent = 'Antwort bereit!';
+                            document.getElementById('instructionText').textContent = 'Scanne nun DIESEN Code mit dem ersten Gerät ein, um das Pairing abzuschließen.';
+                        }
+                    };
+                    
+                    // Bereite das erste Gerät parallel darauf vor, unsere Antwort zu scannen
+                    localConnection.ondatachannel = (e) => {
+                        dataChannel = e.channel;
+                        setupDataChannelHandlers();
+                    };
+                } else if (remoteDesc.type === "answer") {
+                    // Wir haben die Antwort auf unser Offer gescannt -> Verbindung steht!
+                    await localConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
+                }
+            } catch (err) {
+                console.error("Pairing-Fehler", err);
+                resetSyncUI();
+            }
+        }
+
+        function setupDataChannelHandlers() {
+            dataChannel.onopen = () => {
+                document.getElementById('statusDot').className = 'status-dot connected';
+                document.getElementById('statusText').textContent = 'Live Gekoppelt!';
+                
+                // Schließe alle Sync-Fenster sauber nach Erfolg
+                setTimeout(resetSyncUI, 1500); 
+                broadcastData();
+            };
+
+            dataChannel.onmessage = (e) => {
+                tasks = JSON.parse(e.data);
+                saveToLocalStorage();
+                renderBoard();
+            };
+        }
+
+        // --- BOARD LOGIK ---
+        function createNewTask() {
+            const text = taskInput.value.trim();
+            if (text === "") return;
+
+            const newTask = {
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                text: text,
+                tag: tagSelect.value,
+                status: 'todo'
+            };
+
+            tasks.push(newTask);
+            saveToLocalStorage();
+            renderBoard();
+            broadcastData();
+
+            taskInput.value = "";
+            taskInput.focus();
+        }
+
+        function moveTask(id, newStatus) {
+            tasks = tasks.map(task => {
+                if (task.id === id) task.status = newStatus;
+                return task;
+            });
+            saveToLocalStorage();
+            renderBoard();
+            broadcastData();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(task => task.id !== id);
+            saveToLocalStorage();
+            renderBoard();
+            broadcastData();
+        }
+
+        function renderBoard() {
+            document.getElementById('todo-list').innerHTML = '';
+            document.getElementById('progress-list').innerHTML = '';
+            document.getElementById('done-list').innerHTML = '';
+
+            let counts = { todo: 0, progress: 0, done: 0 };
+
+            tasks.forEach(task => {
+                counts[task.status]++;
+
+                const li = document.createElement('li');
+                li.className = 'task-card';
+
+                const tagSpan = document.createElement('span');
+                tagSpan.className = `tag ${task.tag}`;
+                tagSpan.textContent = task.tag;
+                li.appendChild(tagSpan);
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'task-text';
+                textSpan.textContent = task.text;
+                li.appendChild(textSpan);
+
+                const footer = document.createElement('div');
+                footer.className = 'task-footer';
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'task-actions';
+
+                if (task.status === 'progress' || task.status === 'done') {
+                    const backBtn = document.createElement('button');
+                    backBtn.className = 'action-btn';
+                    backBtn.textContent = '◀';
+                    backBtn.onclick = () => moveTask(task.id, task.status === 'done' ? 'progress' : 'todo');
+                    actionsDiv.appendChild(backBtn);
+                }
+
+                const delBtn = document.createElement('button');
+                delBtn.className = 'action-btn delete';
+                delBtn.textContent = '🗑';
+                delBtn.onclick = () => deleteTask(task.id);
+
+                if (task.status === 'todo' || task.status === 'progress') {
+                    const nextBtn = document.createElement('button');
+                    nextBtn.className = 'action-btn';
+                    nextBtn.textContent = task.status === 'todo' ? '▶' : '✔';
+                    nextBtn.onclick = () => moveTask(task.id, task.status === 'todo' ? 'progress' : 'done');
+                    actionsDiv.appendChild(nextBtn);
+                }
+
+                actionsDiv.insertBefore(delBtn, actionsDiv.children[1] || null);
+                footer.appendChild(actionsDiv);
+                li.appendChild(footer);
+
+                document.getElementById(`${task.status}-list`).appendChild(li);
+            });
+
+            document.getElementById('todo-count').textContent = counts.todo;
+            document.getElementById('progress-count').textContent = counts.progress;
+            document.getElementById('done-count').textContent = counts.done;
+        }
+
+        addBtn.addEventListener('click', createNewTask);
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createNewTask();
+        });
+
+        renderBoard();
+    </script>
+</body>
+</html>
