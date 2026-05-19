@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>N/G - Mein Workspace</title>
-    <!-- Nur noch ein einziges, leichtes Skript für die QR-Code-Generierung -->
+    <!-- Leichtes Skript für die QR-Code-Generierung -->
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <style>
         body {
@@ -86,7 +86,7 @@
             align-items: center;
         }
 
-        /* --- FLEXIBLES KOPPLUNGS PANEL --- */
+        /* --- KOPPLUNGS PANEL --- */
         .sync-panel {
             background-color: #13151a;
             border: 1px solid #1f232d;
@@ -124,7 +124,6 @@
         .status-dot.connected { background-color: #22c55e; }
         .status-dot.searching { background-color: #eab308; }
 
-        /* Dropdown Menü direkt am Button */
         .sync-dropdown-container {
             position: relative;
             display: inline-block;
@@ -174,7 +173,7 @@
             border-radius: 8px;
         }
 
-        /* Natives Video-Element für schnellen, schlanken Kamera-Stream */
+        /* Kamera-Stream ohne Spiegelung für fehlerfreies QR-Scannen */
         #videoScanner {
             width: 240px;
             height: 240px;
@@ -182,7 +181,6 @@
             background: #000;
             border-radius: 8px;
             border: 1px solid #242936;
-            transform: scaleX(-1); /* Spiegelt die Frontkamera für leichtere Bedienung */
         }
 
         /* Eingabebereich */
@@ -322,7 +320,6 @@
         <div class="header-bar">
             <h1>Mein Workspace</h1>
             
-            <!-- Kopplungs-Panel mit Dropdown-Menü -->
             <div class="sync-panel">
                 <div class="sync-header">
                     <div class="sync-status">
@@ -387,7 +384,7 @@
 
         <div class="status-bar">
             <span>Verbunden mit Go-Server auf http://localhost:54321</span>
-            <span>🔒 Serverloses P2P via QR-Menü (Nativ-Cam)</span>
+            <span>🔒 Serverloses P2P via GitHub Pages</span>
         </div>
     </div>
 
@@ -446,7 +443,6 @@
             localConnection = new RTCPeerConnection(rtcConfig);
 
             if (showQR) {
-                // FALL A: QR-Code anzeigen (Agiert als Host)
                 document.getElementById('statusText').textContent = 'Generiere QR...';
                 document.getElementById('instructionText').textContent = 'Lass das andere Gerät diesen QR-Code scannen.';
 
@@ -466,62 +462,68 @@
                     }
                 };
 
-                // Falls wir die Antwort vom Scanner des anderen Geräts verarbeiten
                 localConnection.ondatachannel = (e) => {
                     dataChannel = e.channel;
                     setupDataChannelHandlers();
                 };
 
             } else {
-                // FALL B: Kamera scannen (Agiert als Client)
                 document.getElementById('statusText').textContent = 'Kamera anfordern...';
-                document.getElementById('instructionText').textContent = 'Bitte erlaube den Kamera-Zugriff und halte den QR-Code des anderen Geräts ins Bild.';
+                document.getElementById('instructionText').textContent = 'Bitte erlaube den Kamera-Zugriff.';
                 
                 const video = document.getElementById('videoScanner');
                 video.style.display = 'block';
 
                 try {
-                    // Kamera-Zugriff explizit anfordern (Nutzt bevorzugt die rückseitige Kamera, falls vorhanden)
+                    // Ersetzt "user" durch "environment", um auf Smartphones direkt die Hauptkamera hinten anzusprechen
                     streamInstance = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
                     video.srcObject = streamInstance;
+                    
+                    // Sicherstellen, dass das Video wirklich geladen ist
+                    await video.play();
                     document.getElementById('statusText').textContent = 'Scanne...';
 
-                    // QR-Code Scan-Schleife über ein temporäres Canvas im Hintergrund
+                    // Fallback-Skript im Hintergrund laden, falls die native Shape-API fehlt
+                    if (!window.jsQR && !window.BarcodeDetector) {
+                        await new Promise(resolve => {
+                            const script = document.createElement('script');
+                            script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
+                            script.onload = resolve;
+                            document.head.appendChild(script);
+                        });
+                    }
+
                     const scanCanvas = document.createElement('canvas');
                     const context = scanCanvas.getContext('2d');
 
-                    // Dynamischer Import eines extrem kompakten nativen Barcode-Unterstützers falls verfügbar, sonst Fallback
+                    // Schleife zur autonomen Code-Erkennung
                     scanInterval = setInterval(async () => {
                         if (video.readyState === video.HAVE_ENOUGH_DATA) {
                             scanCanvas.width = video.videoWidth;
                             scanCanvas.height = video.videoHeight;
                             context.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
                             
-                            // Nutzt die native, pfeilschnelle Shape Detection API des Browsers falls vorhanden
+                            // 1. Priorität: Schnelle native Browser-Erkennung
                             if (window.BarcodeDetector) {
-                                const detector = new BarcodeDetector({ formats: ['qr_code'] });
-                                const barcodes = await detector.detect(scanCanvas);
-                                if (barcodes.length > 0) {
-                                    handleScannedToken(barcodes[0].rawValue);
-                                }
-                            } else {
-                                // Fallback: Wenn das System kein integriertes Scanning hat, laden wir kurz im Hintergrund den Parser
-                                if (!window.jsQR) {
-                                    await new Promise(resolve => {
-                                        const script = document.createElement('script');
-                                        script.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
-                                        script.onload = resolve;
-                                        document.head.appendChild(script);
-                                    });
-                                }
+                                try {
+                                    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                                    const barcodes = await detector.detect(scanCanvas);
+                                    if (barcodes.length > 0) {
+                                        handleScannedToken(barcodes[0].rawValue);
+                                    }
+                                } catch(e) { console.log("Native API wartet..."); }
+                            } 
+                            
+                            // 2. Priorität / Fallback: jsQR Parser
+                            if (window.jsQR) {
                                 const imageData = context.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
                                 const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-                                if (code) {
+                                if (code && code.data) {
                                     handleScannedToken(code.data);
                                 }
                             }
                         }
-                    }, 300);
+                    }, 250); // Intervall leicht verkürzt für schnellere Reaktionen
 
                 } catch (err) {
                     console.error("Kamerafehler:", err);
@@ -543,7 +545,6 @@
                 const remoteDesc = JSON.parse(atob(decodedText));
                 
                 if (remoteDesc.type === "offer") {
-                    // Wir haben ein Offer gescannt -> Antwort erstellen und als neuen QR anzeigen!
                     await localConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
                     const answer = await localConnection.createAnswer();
                     await localConnection.setLocalDescription(answer);
@@ -555,17 +556,15 @@
                             canvas.style.display = 'block';
                             new QRious({ element: canvas, value: myAnswerToken, size: 180 });
                             document.getElementById('statusText').textContent = 'Antwort bereit!';
-                            document.getElementById('instructionText').textContent = 'Scanne nun DIESEN Code mit dem ersten Gerät ein, um das Pairing abzuschließen.';
+                            document.getElementById('instructionText').textContent = 'Scanne nun diesen Code mit dem ersten Gerät ein, um das Pairing abzuschließen.';
                         }
                     };
                     
-                    // Bereite das erste Gerät parallel darauf vor, unsere Antwort zu scannen
                     localConnection.ondatachannel = (e) => {
                         dataChannel = e.channel;
                         setupDataChannelHandlers();
                     };
                 } else if (remoteDesc.type === "answer") {
-                    // Wir haben die Antwort auf unser Offer gescannt -> Verbindung steht!
                     await localConnection.setRemoteDescription(new RTCSessionDescription(remoteDesc));
                 }
             } catch (err) {
@@ -579,7 +578,6 @@
                 document.getElementById('statusDot').className = 'status-dot connected';
                 document.getElementById('statusText').textContent = 'Live Gekoppelt!';
                 
-                // Schließe alle Sync-Fenster sauber nach Erfolg
                 setTimeout(resetSyncUI, 1500); 
                 broadcastData();
             };
